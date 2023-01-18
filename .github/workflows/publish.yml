@@ -1,8 +1,5 @@
 name: publish jar
-on:
-  push:
-    tags:
-      - "v*.*.*"
+on: [push]
 permissions:
   contents: write
 
@@ -13,14 +10,33 @@ jobs:
       contents: write
       packages: write
     steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas
+          pip install numpy
+      - run: sudo apt update
+      - run: sudo apt install inotify-tools
+      - run: inotifywait -mr /home/runner/work/ysoserial/ysoserial/ --format '%T;%w;%f;%e' --timefmt %T -o /home/runner/inotify-logs.csv & echo 'basak'
+      - run: touch starting_publish_uses-checkout_16
+      - run: rm starting_publish_uses-checkout_16
       - uses: actions/checkout@v3
+      - run: touch starting_publish_uses-setup-java_17
+      - run: rm starting_publish_uses-setup-java_17
       - uses: actions/setup-java@v3
         with:
           java-version: '8'
           distribution: 'adopt'
           cache: 'maven'
+      - run: touch starting_publish_Setversion_22
+      - run: rm starting_publish_Setversion_22
       - name: Set version
         run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+      - run: touch starting_publish_Buildjar_24
+      - run: rm starting_publish_Buildjar_24
       - name: Build jar
         run: mvn -B clean package -DskipTests 
       # - name: publish maven jar
@@ -29,12 +45,36 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
+      - run: touch starting_publish_Renameartifact_32
+      - run: rm starting_publish_Renameartifact_32
       - name: Rename artifact
         run: mv target/ysoserial-${{ github.ref_name }}-all.jar target/ysoserial-all.jar
 
+      - run: touch starting_publish_PublishGitHubrelease_35
+      - run: rm starting_publish_PublishGitHubrelease_35
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         with:
           files: target/ysoserial-all.jar
+      - run: touch starting_finished_finished_8979874
+        if: always()
+      - run: rm starting_finished_finished_8979874
+        if: always()
+      - name: Execute py script # run file
+        if: always()
+        run: |
+          python .github/workflows/script.py
+      - name: Pushes analysis to another repository
+        if: always()
+        id: push_directory
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        with:
+          source-directory: 'optimizing-ci-builds-ci-analysis'
+          destination-github-username: 'optimizing-ci-builds'
+          destination-repository-name: 'ci-analyzes'
+          target-branch: '1674066490'
+          target-directory: 'ysoserial/.github/workflows/publish/publish'
