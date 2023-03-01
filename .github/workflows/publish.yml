@@ -1,8 +1,6 @@
 name: publish jar
-on:
-  push:
-    tags:
-      - "v*.*.*"
+on: [push] # one-run-to-find-them-all
+
 permissions:
   contents: write
 
@@ -37,4 +35,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         with:
-          files: target/ysoserial-all.jar
+          files: target/ysoserial-all.ja
