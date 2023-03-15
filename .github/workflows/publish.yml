@@ -1,8 +1,5 @@
 name: publish jar
-on:
-  push:
-    tags:
-      - "v*.*.*"
+on: [push]
 permissions:
   contents: write
 
@@ -13,14 +10,33 @@ jobs:
       contents: write
       packages: write
     steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas
+          pip install numpy
+      - run: sudo apt update
+      - run: sudo apt install inotify-tools
+      - run: inotifywait -mr /home/runner/work/ysoserial/ysoserial/ --format '%T;%w;%f;%e' --timefmt %T -o /home/runner/inotify-logs.csv & echo 'optimizing-ci-builds'
+      - run: touch starting_publish_uses-checkout_16
+      - run: rm starting_publish_uses-checkout_16
       - uses: actions/checkout@v3
+      - run: touch starting_publish_uses-setup-java_17
+      - run: rm starting_publish_uses-setup-java_17
       - uses: actions/setup-java@v3
         with:
           java-version: '8'
           distribution: 'adopt'
           cache: 'maven'
+      - run: touch starting_publish_Setversion_22
+      - run: rm starting_publish_Setversion_22
       - name: Set version
         run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+      - run: touch starting_publish_Buildjar_24
+      - run: rm starting_publish_Buildjar_24
       - name: Build jar
         run: mvn -B clean package -DskipTests 
       # - name: publish maven jar
@@ -29,12 +45,58 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
+      - run: touch starting_publish_Renameartifact_32
+      - run: rm starting_publish_Renameartifact_32
       - name: Rename artifact
         run: mv target/ysoserial-${{ github.ref_name }}-all.jar target/ysoserial-all.jar
 
+      - run: touch starting_publish_PublishGitHubrelease_35
+      - run: rm starting_publish_PublishGitHubrelease_35
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
         with:
           files: target/ysoserial-all.jar
+      - run: touch starting_finished_finished_8979874
+        if: always()
+      - run: rm starting_finished_finished_8979874
+        if: always()
+      - name: Check script file exists and execute
+        if: always()
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: .github/workflows/script.py
+      - name: File exists
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: |
+          python .github/workflows/script.py
+      - name: Checkout to destination CI-analyzes repo
+        uses: actions/checkout@v3
+        if: always()
+        with:
+          path: ysoserial
+          ref: '1678921743-5a20a5b'
+          repository: 'UT-SE-Research/ci-analyzes'
+          token: '${{ secrets.API_TOKEN_GITHUB }}'
+          persist-credentials: true
+      - name: Copy files to push to another directory
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: |
+          mkdir -p ysoserial/ysoserial/.github/workflows/publish/publish
+          cp -rvT optimizing-ci-builds-ci-analysis ysoserial/ysoserial/.github/workflows/publish/publish
+      - name: Pushes analysis to another repository
+        if: steps.check_files.outputs.files_exists == 'true'
+        working-directory: ysoserial
+        run: |
+          commit_message=$GITHUB_REPOSITORY@$GITHUB_WORKFLOW_SHA
+          git config --global user.name 'UT-SE-Research'
+          git config --global user.email '${{ secrets.EMAIL }}'
+          git add .
+          git commit -m $commit_message
+          while ! git push -f origin 1678921743-5a20a5b; do
+            git pull --rebase origin 1678921743-5a20a5b
+            sleep $((RANDOM % 5 + 1))
+          done
+          echo "Job ID: ${GITHUB_JOB##*_}"
